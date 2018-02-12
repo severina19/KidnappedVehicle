@@ -159,7 +159,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             double landmarkX, landmarkY;
             unsigned int k=0;
             bool found = false;
-            while(!found && k<relLandmarks.size()){
+            while(!found && k<transformedObs.size()){
                 if(relLandmarks[k].id == transformedObs[j].id ){
                     found = true;
                     landmarkX = relLandmarks[k].x;
