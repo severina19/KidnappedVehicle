@@ -46,9 +46,6 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
         particles.push_back(particle);
     }
     is_initialized = true;
-    x_init = x_dist(gen);
-    y_init = y_dist(gen);
-    theta_init = theta_dist(gen);
 
 }
 
@@ -72,12 +69,12 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
         {
             particles[i].x+= (velocity/yaw_rate)*(sin(theta+yaw_rate*delta_t)-sin(theta));
             particles[i].y+=(velocity/yaw_rate)*(cos(theta)-cos(theta+yaw_rate*delta_t));
-            particles[i].theta+=theta+yaw_rate*delta_t;
+            particles[i].theta+=yaw_rate*delta_t;
         }
         else
         {
-            particles[i].x=velocity*delta_t*cos(particles[i].theta);
-            particles[i].y=velocity*delta_t*sin(particles[i].theta);
+            particles[i].x+=velocity*delta_t*cos(particles[i].theta);
+            particles[i].y+=velocity*delta_t*sin(particles[i].theta);
         }
         particles[i].x+=x_dist(gen);
         particles[i].y+=y_dist(gen);
@@ -94,7 +91,7 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
     for(unsigned int i=0; i<observations.size();i++)
     {
         double minDistance = -1;
-        int FoundId = -1;
+        int IdFound = -1;
 
         for(unsigned int j=0; j<predicted.size();j++)
         {
@@ -105,19 +102,16 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
             {
                 if(distance < minDistance){
                     minDistance =distance;
-                    FoundId = predicted[j].id;
+                    IdFound = predicted[j].id;
                 }
             }else
             {
                 minDistance = distance;
-                FoundId = predicted[j].id;
+                IdFound = predicted[j].id;
             }
         }
-        observations[i].id=FoundId;
-
+        observations[i].id=IdFound;
     }
-
-
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
@@ -135,18 +129,19 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     double stdRange=std_landmark[0];
     double stdBearing = std_landmark[1];
     for (int i=0; i<num_particles;i++) {
+
         double x =particles[i].x;
         double y=particles[i].y;
         double theta = particles[i].theta;
-        vector<LandmarkObs> relRangeLandmarks;
+        vector<LandmarkObs> relLandmarks;
         for (unsigned int j=0; j<map_landmarks.landmark_list.size();j++){
             float landmarkX=map_landmarks.landmark_list[j].x_f;
             float landmarkY=map_landmarks.landmark_list[j].y_f;
-            int id=map_landmarks.landmark_list[j].id_i;
+            int landmarkId=map_landmarks.landmark_list[j].id_i;
             double dX = x-landmarkX;
             double dY = y-landmarkY;
             if(dX*dX+dY*dY <= sensor_range*sensor_range){
-                relRangeLandmarks.push_back(LandmarkObs{is,landmarkX,landmarkY});
+                relLandmarks.push_back(LandmarkObs{landmarkId,landmarkX,landmarkY});
 
             }
         }
@@ -156,17 +151,17 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             double y_t = sin(theta)*observations[j].x - cos(theta)*observations[j].y + y;
             transformedObs.push_back(LandmarkObs{observations[j].id, x_t,y_t});
         }
-        dataAssociation(relRangeLandmarks, transformedObs);
+        dataAssociation(relLandmarks, transformedObs);
         particles[i].weight =1.0;
         for(unsigned int j=0;j<transformedObs.size();j++){
             double landmarkX, landmarkY;
             unsigned int k=0;
             bool found = false;
-            while(!found && k<relRangeLandmarks.size()){
-                if(relRangeLandmarks[k].id == transformedObs.size() ){
+            while(!found && k<relLandmarks.size()){
+                if(relLandmarks[k].id == transformedObs[j].id ){
                     found = true;
-                    landmarkX = relRangeLandmarks[k].x;
-                    landmarkY =relRangeLandmarks[k].y;
+                    landmarkX = relLandmarks[k].x;
+                    landmarkY =relLandmarks[k].y;
                 }
                 k++;
             }
@@ -180,13 +175,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             }else{
                 particles[i].weight*=weight;
             }
-
         }
-
     }
-
-
-
 }
 
 void ParticleFilter::resample() {
@@ -196,6 +186,7 @@ void ParticleFilter::resample() {
 
     vector<double> weights;
     double maxWeight =-1;
+    //find out the maximum weight
     for(unsigned int i=0;i<num_particles;i++){
         weights.push_back(particles[i].weight);
                 if(particles[i].weight>maxWeight){
@@ -206,6 +197,7 @@ void ParticleFilter::resample() {
     uniform_real_distribution<double> distDouble(0.0, maxWeight);
     uniform_int_distribution<int> distInt(0,num_particles -1);
 
+    //resample the weights
     int index=distInt(gen);
     double beta = 0.0;
 
