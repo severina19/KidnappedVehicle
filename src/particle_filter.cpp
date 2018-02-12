@@ -159,7 +159,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             double landmarkX, landmarkY;
             unsigned int k=0;
             bool found = false;
-            while(!found && k<transformedObs.size()){
+            while(!found && k<relLandmarks.size()){
                 if(relLandmarks[k].id == transformedObs[j].id ){
                     found = true;
                     landmarkX = relLandmarks[k].x;
@@ -224,6 +224,10 @@ Particle ParticleFilter::SetAssociations(Particle& particle, const std::vector<i
     // associations: The landmark id that goes along with each listed association
     // sense_x: the associations x mapping already converted to world coordinates
     // sense_y: the associations y mapping already converted to world coordinates
+
+    particle.associations.clear();
+    particle.sense_x.clear();
+    particle.sense_y.clear();
 
     particle.associations= associations;
     particle.sense_x = sense_x;
