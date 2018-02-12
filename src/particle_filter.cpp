@@ -18,8 +18,6 @@
 #include "particle_filter.h"
 #define EPS 0.00001
 using namespace std;
-std::random_device rd{};
-std::mt19937 gen{rd()};
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
