@@ -18,13 +18,14 @@
 #include "particle_filter.h"
 #define EPS 0.00001
 using namespace std;
+std::mt19937 gen{rd()};
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// TODO: Set the number of particles. Initialize all particles to first position (based on estimates of 
 	//   x, y, theta and their uncertainties from GPS) and all weights to 1. 
 	// Add random Gaussian noise to each particle.
 	// NOTE: Consult particle_filter.h for more information about this method (and others in this file).
-    if (is_initialized == TRUE)
+    if (is_initialized == true)
     {return;}
 
     num_particles = 100;
@@ -36,7 +37,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
     normal_distribution<double> y_dist{y,std_y};
     normal_distribution<double> theta_dist{theta,std_theta};
 
-    for(i=0;i<num_particles;i++){
+    for(unsigned int i=0;i<num_particles;i++){
         Particle particle;
         particle.id = i;
         particle.x=x_dist(gen);
@@ -64,7 +65,7 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 
 
     for (int i=0;i<num_particles;i++){
-
+        double theta = particles[i].theta;
         if(fabs(yaw_rate)> EPS)
         {
             particles[i].x+= (velocity/yaw_rate)*(sin(theta+yaw_rate*delta_t)-sin(theta));
@@ -73,8 +74,8 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
         }
         else
         {
-            particles[i].x+=velocity*delta_t*cos(particles[i].theta);
-            particles[i].y+=velocity*delta_t*sin(particles[i].theta);
+            particles[i].x+=velocity*delta_t*cos(theta);
+            particles[i].y+=velocity*delta_t*sin(theta);
         }
         particles[i].x+=x_dist(gen);
         particles[i].y+=y_dist(gen);
@@ -147,7 +148,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         }
         vector<LandmarkObs> transformedObs;
         for(unsigned int j=0;j<observations.size();j++){
-            double x_t = con(theta)*observations[j].x -sin(theta)*observations[j].y +x;
+            double x_t = cos(theta)*observations[j].x -sin(theta)*observations[j].y +x;
             double y_t = sin(theta)*observations[j].x - cos(theta)*observations[j].y + y;
             transformedObs.push_back(LandmarkObs{observations[j].id, x_t,y_t});
         }
@@ -169,7 +170,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
             double dX= transformedObs[j].x - landmarkX;
             double dY= transformedObs[j].y- landmarkY;
 
-            double weight = (1/(2*M_PI*stdRange*stdBearing))* exp( -( dX*dX/(2*stdLandmarkRange*stdLandmarkRange) + (dY*dY/(2*stdLandmarkBearing*stdLandmarkBearing)) ) );
+            double weight = (1/(2*M_PI*stdRange*stdBearing))* exp( -( dX*dX/(2*stdRange*stdRange) + (dY*dY/(2*stdBearing*stdBearing)) ) );
             if(weight == 0){
                 particles[i].weight*=EPS;
             }else{
